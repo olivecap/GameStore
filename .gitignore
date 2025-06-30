@@ -1,0 +1,6 @@
+﻿################################################################################
+# Ce fichier .gitignore a été automatiquement créé par Microsoft(R) Visual Studio.
+################################################################################
+
+/GameStore.API/obj
+/GameStore.API/bin/Debug/net9.0
