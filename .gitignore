@@ -5,3 +5,5 @@
 /GameStore.API/obj
 /GameStore.API/bin/Debug/net9.0
 /.vs
+/GameStore.API/GamesStore.db
+/GameStore.API/DB

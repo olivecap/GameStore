@@ -52,8 +52,10 @@ namespace GameStore.API.Endpoints
             // Add group root to avaoid to add each time route (games)
             // Use group in each endpoint
             // Avoid to recall /games  in each endpoints
+            // Add validation of inut
             //---------------------------------------------------------
-            var routeGroup = app.MapGroup("games");
+            var routeGroup = app.MapGroup("games")
+                                .WithParameterValidation();
 
             //--------------------------------
             //- Add here all new endpoints
