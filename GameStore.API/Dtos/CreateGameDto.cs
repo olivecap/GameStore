@@ -14,8 +14,8 @@ namespace GameStore.API.Dtos
         [StringLength(100, MinimumLength = 1)]
         string Name,
         [Required]
-        [StringLength(50)]
-        string Genre,
+        [Range(0, Int32.MaxValue - 1)]
+        int GenreId,
         [Required]
         [Range(0, 200)]
         decimal Price,

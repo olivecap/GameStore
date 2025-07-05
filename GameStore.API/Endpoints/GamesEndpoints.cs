@@ -1,5 +1,9 @@
-﻿using GameStore.API.Dtos;
+﻿using GameStore.API.Data;
+using GameStore.API.Dtos;
+using GameStore.API.Entities;
+using GameStore.API.Mapping;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.Eventing.Reader;
 using System.Runtime.CompilerServices;
 
 namespace GameStore.API.Endpoints
@@ -61,23 +65,90 @@ namespace GameStore.API.Endpoints
             //- Add here all new endpoints
             //--------------------------------
             // Get all games /games
-            routeGroup.MapGet("/", () => Results.Ok(games));
+            // Add db link using injection GameStoreContext dbContext
+            routeGroup.MapGet("/", (GameStoreContext dbContext) =>
+            {
+                Results.Ok(dbContext.Games);
+            });
 
             // Get games by id /get/{id}
-            routeGroup.MapGet("/{id:int}", ([FromRoute] int id) =>
+            // Add db link using injection GameStoreContext dbContext
+            routeGroup.MapGet("/{id:int}", ([FromRoute] int id, GameStoreContext dbContext) =>
             {
+                /*
                 GameDto? gameDto = games.Find(x => x.Id == id);
                 return gameDto == null ? Results.NotFound(gameDto) : Results.Ok(gameDto);
+                */
+
+                Game gameEntity = dbContext.Games.Find(id);
+                return gameEntity == null ? Results.NotFound(gameEntity) : Results.Ok(gameEntity);
             })
             .WithName(GetGameEntryPointName);
 
             // Post games (body = create game dto
-            routeGroup.MapPost("/", ([FromBody] CreateGameDto newGame) =>
+            // Add db link using injection GameStoreContext dbContext
+            routeGroup.MapPost("/", ([FromBody] CreateGameDto newGame, GameStoreContext dbContext) =>
             {
+                /*
                 int newId = games.Max(i => i.Id) + 1;
                 GameDto gameDto = new GameDto(newId, newGame.Name, newGame.Genre, newGame.Price, newGame.ReleaseDate);
                 games.Add(gameDto);
-                return Results.CreatedAtRoute(GetGameEntryPointName, new { id = newId }, gameDto);
+                */
+
+                // Replace by extended CreateContextDto class
+                // Create Game entity
+                /*
+                int newId = dbContext.Games.Max(i => i.Id) + 1;
+                Game game = new()
+                {
+                    // Without table link
+                    Id = newId,
+                    Name = newGame.Name,
+                    Price= newGame.Price,
+                    ReleaseDate = newGame.ReleaseDate,  
+
+                    // For genre and table we need now to change Created DTO because genre is a link
+                    // Save id
+                    GenreId = newGame.GenreId,
+                    //Genre we need to get info from table genre
+                    Genre = dbContext.Genres.Find(newGame.GenreId)
+                };
+                */
+                Game game = newGame.ToEntity();
+                if (dbContext.Games.Count() == 0)
+                    game.Id = 1;
+                else
+                    game.Id = dbContext.Games.Max(i => i.Id) + 1;
+                game.Genre = dbContext.Genres.Find(newGame.GenreId);
+
+                // Add object i db
+                dbContext.Games.Add(game);
+
+                // Save DB
+                dbContext.SaveChanges();
+
+                //Replace code by game mapping fonction
+                /*
+                // To avoid to change contract with client we need to atranform enity in DTO
+                GameDto gameDto = new
+                (
+                    game.Id,
+                    game.Name,
+                    game.Genre!.Name,
+                    game.Price,
+                    game.ReleaseDate
+                );
+                */
+                //We cn directly returned in return
+                GameDto gamedto = game.ToDto();
+
+
+                // Return DTO
+                return Results.CreatedAtRoute(
+                    GetGameEntryPointName, 
+                    new { id = game.Id },
+                    game.ToDto()
+                );
             });
 
             // Post games (body = create game dto
