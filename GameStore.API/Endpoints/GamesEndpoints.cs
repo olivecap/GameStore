@@ -3,6 +3,7 @@ using GameStore.API.Dtos;
 using GameStore.API.Entities;
 using GameStore.API.Mapping;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.Eventing.Reader;
 using System.Runtime.CompilerServices;
 
@@ -21,7 +22,9 @@ namespace GameStore.API.Endpoints
         //------------------------------
         // Create record in memeory
         //------------------------------
-        private readonly static List<GameDto> games = [
+        // Replace by db object
+        /*
+        private readonly static List<GameSummaryDto> games = [
                 new (
             1,
             "Street Figther II",
@@ -41,6 +44,7 @@ namespace GameStore.API.Endpoints
             69.99M,
             new DateOnly(2022, 9, 27))
             ];
+        */
 
         //---------------------
         //  Extension class
@@ -64,13 +68,26 @@ namespace GameStore.API.Endpoints
             //--------------------------------
             //- Add here all new endpoints
             //--------------------------------
+            //----------------------------------
+            //      GET ENDPOINT
+            //----------------------------------
             // Get all games /games
             // Add db link using injection GameStoreContext dbContext
             routeGroup.MapGet("/", (GameStoreContext dbContext) =>
             {
-                Results.Ok(dbContext.Games);
+                //Results.Ok(games);
+                return Results.Ok(dbContext.Games
+                    // Allow to specify we also use gGenre table
+                    .Include(game => game.Genre)
+                    // Select each game
+                    .Select(game => game.ToGameSummaryDto())
+                    // Optimization to avoid to track modification because one shot action
+                    .AsNoTracking());
             });
 
+            //----------------------------------
+            //      GET BY ID ENDPOINT
+            //----------------------------------
             // Get games by id /get/{id}
             // Add db link using injection GameStoreContext dbContext
             routeGroup.MapGet("/{id:int}", ([FromRoute] int id, GameStoreContext dbContext) =>
@@ -80,14 +97,22 @@ namespace GameStore.API.Endpoints
                 return gameDto == null ? Results.NotFound(gameDto) : Results.Ok(gameDto);
                 */
 
-                Game gameEntity = dbContext.Games.Find(id);
-                return gameEntity == null ? Results.NotFound(gameEntity) : Results.Ok(gameEntity);
+                // Get entity object
+                Game? gameEntity = dbContext.Games.Find(id);
+                if (gameEntity == null)
+                    return Results.NotFound();
+
+                // Transform 
+                return gameEntity == null ? Results.NotFound() : Results.Ok(gameEntity.ToGameDetailsDto());
             })
             .WithName(GetGameEntryPointName);
 
+            //----------------------------------
+            //      POST ENDPOINT
+            //----------------------------------
             // Post games (body = create game dto
             // Add db link using injection GameStoreContext dbContext
-            routeGroup.MapPost("/", ([FromBody] CreateGameDto newGame, GameStoreContext dbContext) =>
+            routeGroup.MapPost("/", ([FromBody] GameCreateDto newGame, GameStoreContext dbContext) =>
             {
                 /*
                 int newId = games.Max(i => i.Id) + 1;
@@ -114,12 +139,9 @@ namespace GameStore.API.Endpoints
                     Genre = dbContext.Genres.Find(newGame.GenreId)
                 };
                 */
-                Game game = newGame.ToEntity();
-                if (dbContext.Games.Count() == 0)
-                    game.Id = 1;
-                else
-                    game.Id = dbContext.Games.Max(i => i.Id) + 1;
-                game.Genre = dbContext.Genres.Find(newGame.GenreId);
+
+                // Generate game entity
+                Game game = newGame.ToEntity(dbContext);
 
                 // Add object i db
                 dbContext.Games.Add(game);
@@ -139,28 +161,29 @@ namespace GameStore.API.Endpoints
                     game.ReleaseDate
                 );
                 */
-                //We cn directly returned in return
-                GameDto gamedto = game.ToDto();
-
-
+                
                 // Return DTO
                 return Results.CreatedAtRoute(
                     GetGameEntryPointName, 
                     new { id = game.Id },
-                    game.ToDto()
+                    game.ToGameDetailsDto()
                 );
             });
 
+            //----------------------------------
+            //      PUT ENDPOINT
+            //----------------------------------
             // Post games (body = create game dto
-            routeGroup.MapPut("/{id:int}", ([FromRoute] int id, [FromBody] UpdateGameDto updateGame) =>
+            routeGroup.MapPut("/{id:int}", ([FromRoute] int id, [FromBody] GameUpdateDto updateGame, GameStoreContext dbContext) =>
             {
+                /*
                 int index = games.FindIndex(x => x.Id == id);
                 if (index == -1)
                     return Results.NotFound(id);
 
                 // Record if not modifiable
                 // Reason why we decide to create a new object at the same index
-                games[index] = new GameDto(
+                games[index] = new GameSummaryDto(
                         id,
                         updateGame.Name,
                         updateGame.Genre,
@@ -168,16 +191,60 @@ namespace GameStore.API.Endpoints
                         updateGame.ReleaseDate
                     );
                 return Results.NoContent();
+                */
+                // Imporvment with dbContext
+                Game? game = dbContext.Games.Find(id);
+                if (game == null)
+                    return Results.NotFound();
+
+                // Update entity
+                // We need to lock entity
+                dbContext.Entry(game)
+                    .CurrentValues
+                    .SetValues(updateGame.ToEntity(game.Id));
+
+                // Save DB
+                dbContext.SaveChanges();
+
+                return Results.Ok(game.ToGameUpdateDto());
             });
 
+            //----------------------------------
+            //      DELETE ENDPOINT
+            //----------------------------------
             // Delete games by id /delete/{id}
-            routeGroup.MapDelete("/{id:int}", ([FromRoute] int id) =>
+            routeGroup.MapDelete("/{id:int}", ([FromRoute] int id, GameStoreContext dbContext) =>
             {
+                /*
                 var gameDto = games.Find(x => x.Id == id);
                 if (gameDto == null)
                     return Results.NotFound(gameDto);
 
                 games.Remove(gameDto);
+                return Results.NoContent();
+                */
+
+                /*
+                Game? game = dbContext.Games.Find(id);
+                if (game is null)
+                    return Results.NotFound();
+
+                // Remove object
+                dbContext.Remove(game);
+
+                // Save db
+                dbContext.SaveChanges();
+                */
+
+                Game? game = dbContext.Games.Find(id);
+                if (game is null)
+                    return Results.NotFound();
+
+                // More optimized
+                dbContext.Games
+                    .Where(game => game.Id == id)
+                    .ExecuteDelete();
+
                 return Results.NoContent();
             });
 

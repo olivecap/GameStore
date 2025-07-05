@@ -1,17 +1,17 @@
 ﻿namespace GameStore.API.Dtos
 {
     /// <summary>
-    /// DTO for game
+    /// DTO for game details containing genreId
     /// </summary>
     /// <param name="Id"></param>
     /// <param name="Name"></param>
-    /// <param name="Genre"></param>
+    /// <param name="GenreID"></param>
     /// <param name="Price"></param>
     /// <param name="ReleaseDate"></param>
-    public record class GameDto(
+    public record class GameDetailsDto(
         int Id, 
         string Name, 
-        string Genre, 
+        int GenreID, 
         decimal Price, 
         DateOnly ReleaseDate);
 }

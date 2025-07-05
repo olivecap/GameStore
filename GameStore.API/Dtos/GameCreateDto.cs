@@ -9,7 +9,7 @@ namespace GameStore.API.Dtos
     /// <param name="Genre"></param>
     /// <param name="Price"></param>
     /// <param name="ReleaseDate"></param>
-    public record class CreateGameDto(
+    public record class GameCreateDto(
         [Required]
         [StringLength(100, MinimumLength = 1)]
         string Name,

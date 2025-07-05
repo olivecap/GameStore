@@ -23,5 +23,10 @@ namespace GameStore.API.Data
                 new { Id = 5, Name = "Kids and Family" }
             );
         }
+
+        public int GenerateGameId()
+        {
+            return Games.Count() == 0 ? 1 : Games.Max(i => i.Id) + 1;
+        }
     }
 }
