@@ -74,16 +74,20 @@ namespace GameStore.API.Endpoints
             //----------------------------------
             // Get all games /games
             // Add db link using injection GameStoreContext dbContext
-            routeGroup.MapGet("/", (GameStoreContext dbContext) =>
+            routeGroup.MapGet("/", async (GameStoreContext dbContext) =>
             {
-                //Results.Ok(games);
-                return Results.Ok(dbContext.Games
+                var gameList = await dbContext.Games
                     // Allow to specify we also use gGenre table
                     .Include(game => game.Genre)
                     // Select each game
                     .Select(game => game.ToGameSummaryDto())
                     // Optimization to avoid to track modification because one shot action
-                    .AsNoTracking());
+                    .AsNoTracking()
+                    // ToListAsync allow to change in async mode
+                    .ToListAsync();
+
+                //Results.Ok(games);
+                return  Results.Ok(gameList);
             });
 
             //----------------------------------
@@ -91,7 +95,7 @@ namespace GameStore.API.Endpoints
             //----------------------------------
             // Get games by id /get/{id}
             // Add db link using injection GameStoreContext dbContext
-            routeGroup.MapGet("/{id:int}", ([FromRoute] int id, GameStoreContext dbContext) =>
+            routeGroup.MapGet("/{id:int}", async ([FromRoute] int id, GameStoreContext dbContext) =>
             {
                 /*
                 GameDto? gameDto = games.Find(x => x.Id == id);
@@ -99,7 +103,8 @@ namespace GameStore.API.Endpoints
                 */
 
                 // Get entity object
-                Game? gameEntity = dbContext.Games.Find(id);
+                // Await and replace find by find async
+                Game? gameEntity = await dbContext.Games.FindAsync(id);
                 if (gameEntity == null)
                     return Results.NotFound();
 
@@ -113,7 +118,7 @@ namespace GameStore.API.Endpoints
             //----------------------------------
             // Post games (body = create game dto
             // Add db link using injection GameStoreContext dbContext
-            routeGroup.MapPost("/", ([FromBody] GameCreateDto newGame, GameStoreContext dbContext) =>
+            routeGroup.MapPost("/", async ([FromBody] GameCreateDto newGame, GameStoreContext dbContext) =>
             {
                 /*
                 int newId = games.Max(i => i.Id) + 1;
@@ -144,11 +149,14 @@ namespace GameStore.API.Endpoints
                 // Generate game entity
                 Game game = newGame.ToEntity(dbContext);
 
+                //----------------------------
+                //  AWAIT ONLY ON SAVE
+                //----------------------------
                 // Add object i db
                 dbContext.Games.Add(game);
 
                 // Save DB
-                dbContext.SaveChanges();
+                await dbContext.SaveChangesAsync();
 
                 //Replace code by game mapping fonction
                 /*
@@ -175,7 +183,7 @@ namespace GameStore.API.Endpoints
             //      PUT ENDPOINT
             //----------------------------------
             // Post games (body = create game dto
-            routeGroup.MapPut("/{id:int}", ([FromRoute] int id, [FromBody] GameUpdateDto updateGame, GameStoreContext dbContext) =>
+            routeGroup.MapPut("/{id:int}", async ([FromRoute] int id, [FromBody] GameUpdateDto updateGame, GameStoreContext dbContext) =>
             {
                 /*
                 int index = games.FindIndex(x => x.Id == id);
@@ -194,7 +202,7 @@ namespace GameStore.API.Endpoints
                 return Results.NoContent();
                 */
                 // Imporvment with dbContext
-                Game? game = dbContext.Games.Find(id);
+                Game? game = await dbContext.Games.FindAsync(id);
                 if (game == null)
                     return Results.NotFound();
 
@@ -205,7 +213,7 @@ namespace GameStore.API.Endpoints
                     .SetValues(updateGame.ToEntity(game.Id));
 
                 // Save DB
-                dbContext.SaveChanges();
+                await dbContext.SaveChangesAsync();
 
                 return Results.Ok(game.ToGameUpdateDto());
             });
@@ -214,12 +222,12 @@ namespace GameStore.API.Endpoints
             //      DELETE AL ENDPOINT
             //----------------------------------
             // Delete all games
-            routeGroup.MapDelete("/", (GameStoreContext dbContext) =>
+            routeGroup.MapDelete("/", async (GameStoreContext dbContext) =>
             {
                 //Delete all object
-                dbContext.Games
+                await dbContext.Games
                     .Where(game => game.Id >= 0)
-                    .ExecuteDelete();
+                    .ExecuteDeleteAsync();
 
                 return Results.NoContent();
             });
@@ -228,7 +236,7 @@ namespace GameStore.API.Endpoints
             //      DELETE ENDPOINT
             //----------------------------------
             // Delete games by id /delete/{id}
-            routeGroup.MapDelete("/{id:int}", ([FromRoute] int id, GameStoreContext dbContext) =>
+            routeGroup.MapDelete("/{id:int}", async ([FromRoute] int id, GameStoreContext dbContext) =>
             {
                 /*
                 var gameDto = games.Find(x => x.Id == id);
@@ -251,14 +259,14 @@ namespace GameStore.API.Endpoints
                 dbContext.SaveChanges();
                 */
 
-                Game? game = dbContext.Games.Find(id);
+                Game? game = await dbContext.Games.FindAsync(id);
                 if (game is null)
                     return Results.NotFound();
 
                 // More optimized
-                dbContext.Games
+                await dbContext.Games
                     .Where(game => game.Id == id)
-                    .ExecuteDelete();
+                    .ExecuteDeleteAsync();
 
                 return Results.NoContent();
             });
