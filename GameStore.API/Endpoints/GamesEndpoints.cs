@@ -2,6 +2,7 @@
 using GameStore.API.Dtos;
 using GameStore.API.Entities;
 using GameStore.API.Mapping;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.Eventing.Reader;
@@ -207,6 +208,20 @@ namespace GameStore.API.Endpoints
                 dbContext.SaveChanges();
 
                 return Results.Ok(game.ToGameUpdateDto());
+            });
+
+            //----------------------------------
+            //      DELETE AL ENDPOINT
+            //----------------------------------
+            // Delete all games
+            routeGroup.MapDelete("/", (GameStoreContext dbContext) =>
+            {
+                //Delete all object
+                dbContext.Games
+                    .Where(game => game.Id >= 0)
+                    .ExecuteDelete();
+
+                return Results.NoContent();
             });
 
             //----------------------------------
