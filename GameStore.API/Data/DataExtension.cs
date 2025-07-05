@@ -7,7 +7,7 @@ namespace GameStore.API.Data
     public static class DataExtension
     {
         //Allow to start automatically migration when you start App
-        public static WebApplication MigrateDB(this WebApplication app)
+        public static async Task MigrateDBAsync(this WebApplication app)
         {
             // Create scope
             using var scope = app.Services.CreateScope();
@@ -16,9 +16,7 @@ namespace GameStore.API.Data
             var dbContext = scope.ServiceProvider.GetRequiredService<GameStoreContext>();
 
             // Migrate
-            dbContext.Database.Migrate();
-                
-            return app;
+            await dbContext.Database.MigrateAsync();
         }
     }
 }

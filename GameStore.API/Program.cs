@@ -23,7 +23,7 @@ var app = builder.Build();
 app.MapGamesEndpoints();
 
 // Run migartion
-app.MigrateDB();
+await app.MigrateDBAsync();
 
 // Run app
 app.Run();
