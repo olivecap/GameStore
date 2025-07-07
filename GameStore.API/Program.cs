@@ -21,6 +21,7 @@ var app = builder.Build();
 //  USE EXTENSION APP TO ADD GAMES ENDPOINTS
 //--------------------------------------------
 app.MapGamesEndpoints();
+app.MapGenresEndpoints();
 
 // Run migartion
 await app.MigrateDBAsync();

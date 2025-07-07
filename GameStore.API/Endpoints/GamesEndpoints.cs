@@ -18,6 +18,13 @@ namespace GameStore.API.Endpoints
         //------------------------------
         // Csts
         //------------------------------
+        // Use in get by id to link with         
+        // .WithName(GetGameEntryPointName);
+        // With post
+        // return Results.CreatedAtRoute(
+        //      GetGameEntryPointName,
+        //      new { id = game.Id },
+        //      game.ToGameDetailsDto());
         const string GetGameEntryPointName = "GetName";
 
         //------------------------------
@@ -55,7 +62,7 @@ namespace GameStore.API.Endpoints
         /// </summary>
         /// <param name="app"></param>
         /// <returns></returns>
-        public static RouteGroupBuilder MapGamesEndpoints(this WebApplication app)
+        public static RouteGroupBuilder MapGenresEndpoints(this WebApplication app)
         {
             //---------------------------------------------------------
             // Add group root to avaoid to add each time route (games)
